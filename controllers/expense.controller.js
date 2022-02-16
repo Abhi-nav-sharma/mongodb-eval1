@@ -1,4 +1,4 @@
-const req = require("express/lib/request")
+
 const Expense = require("../models/expense.model")
 
 const getAllExpensesByUserId= async (req,res)=>{
@@ -6,9 +6,9 @@ const getAllExpensesByUserId= async (req,res)=>{
         const per_page= req.query.per_page || 2
         const page= req.query.page || 1
         const skip= page<0?0:(page-1)*per_page
-        const expense= await Expense.find({user_id:req.params.user_id}).skip(skip).limit(per_page)
+        const expense= await Expense.find({employee_id:req.params.employee_id}).skip(skip).limit(per_page)
         if(!expense){
-            return res.status(400).send('No tweets found for this user')
+            return res.status(400).send('No expenses found for this employee')
         }
         res.status(200).json(expense)
     }
@@ -82,10 +82,14 @@ const getExpenseByType = async (req,res)=>{
 
 const getAverageTime = async (req,res)=>{
     try{
-
+        const expense= await Expense.aggregate([{$match:{reimbursed:true}},{$group:{_id:'$employee_id',average_reimbursement_time_inDays:{$avg:{$dateDiff:{startDate:'$date_of_expense',endDate:'$reimbursed_date',unit:"day"}}}}}])
+        if(!expense){
+            return res.status(400).json({msg:'Something went wrong'})
+        }
+        return res.status(200).json(expense)
     }
     catch(err){
-        
+        return res.status(400).json({status:'failure',error:err.toString()})
     }
 }
 
@@ -93,5 +97,6 @@ module.exports= {
     getAllExpensesByUserId,
     createAnExpense,
     getExpenseByDate,
-    getExpenseByType
+    getExpenseByType,
+    getAverageTime
 }
